@@ -19,7 +19,11 @@ net.eval()
 # ---- app ----
 app = FastAPI(title="ANO_DETECT API")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+from fastapi.responses import FileResponse
 
+@app.get("/")
+def home():
+    return FileResponse(os.path.join(os.path.dirname(__file__), "index.html"))
 MAX_BYTES = 20 * 1024 * 1024
 ALLOWED = (".wav", ".mp3", ".flac")
 
