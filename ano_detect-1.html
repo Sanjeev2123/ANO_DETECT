@@ -1,7 +1,33 @@
 <!DOCTYPE html>
 <html lang="en">
-<script>window.ANO_API_BASE = "http://127.0.0.1:8000";</script>    
-<head><meta charset="utf-8"><title>ANO_DETECT</title>
+
+const sb = supabase.createClient("https://jrmaeotdxygftxciimul.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpybWFlb3RkeHlnZnR4Y2lpbXVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTExNzg4ODMsImV4cCI6MjEwNjc1NDg4M30.fFF5KxlIYnj5yoybDWz3k9KvRgBlMQ4IWl3g9V88tTE");
+let session = null;
+
+function loginView() {
+  document.querySelector("nav").style.display = "none";
+  $("#v").innerHTML = `<div class="pn" style="max-width:360px;margin:60px auto">
+    <h1>Sign in</h1>
+    <input id="em" type="email" placeholder="Email" style="width:100%">
+    <input id="pw" type="password" placeholder="Password" style="width:100%">
+    <div class="row"><button class="btn p" id="in">Log in</button>
+    <button class="btn" id="up">Sign up</button></div>
+    <p id="msg" class="mu"></p></div>`;
+  const creds = () => ({ email: $("#em").value, password: $("#pw").value });
+  $("#in").onclick = async () => {
+    const { error } = await sb.auth.signInWithPassword(creds());
+    if (error) $("#msg").textContent = error.message;
+  };
+  $("#up").onclick = async () => {
+    const { error } = await sb.auth.signUp(creds());
+    $("#msg").textContent = error ? error.message : "Account created. Log in.";
+  };
+}
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>window.ANO_API_BASE = "http://127.0.0.1:8000";</script>
+<head><meta charset="utf-8"><title>ANO DETECT</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -43,6 +69,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 .drop{border:2px dashed var(--ln);border-radius:8px;padding:24px;text-align:center}
 .err{background:var(--badbg);border:1px solid var(--bad);padding:12px;border-radius:6px}
 select,input[type=file]{min-height:44px;font:inherit;max-width:100%}
+input:not([type=file]){min-height:44px;font:inherit;padding:0 10px;border:1px solid var(--ln);border-radius:6px;background:var(--bg);color:var(--ink);max-width:100%}
 @media(max-width:760px){.app{display:block}nav{position:fixed;bottom:0;left:0;right:0;top:auto;height:auto;flex-direction:row;padding:4px;z-index:9;overflow-x:auto;gap:0}
 nav .logo,nav .sys{display:none}nav a{flex:1;text-align:center;padding:10px 6px;font-size:13px;white-space:nowrap}
 main{padding:14px 14px 90px}table{display:none}.cards{display:block}}
@@ -50,14 +77,14 @@ main{padding:14px 14px 90px}table{display:none}.cards{display:block}}
 </style></head><body>
 <div class="app"><nav aria-label="Main"><div class="logo">ANO_DETECT</div>
 <a href="#/">Dashboard</a><a href="#/live">Live Monitor</a><a href="#/analyze">Analyze Audio</a><a href="#/machines">Machines</a><a href="#/history">History</a><a href="#/alerts">Alerts</a>
-<div class="sys" id="sys" role="status"></div></nav><main id="v"></main></div>
+</nav><main id="v"></main></div>
 <script>
 /* ===== API layer: set window.ANO_API_BASE to your FastAPI URL to leave demo mode ===== */
 const BASE=window.ANO_API_BASE||"";const DEMO=!BASE;
 const DEMO_SAMPLES={normal:{result:"NORMAL",anomaly_score:0.11,threshold:0.70,confidence:0.978,signal_quality:"EXCELLENT",model_version:"demo",seed:2},
 anomaly:{result:"ANOMALY",anomaly_score:0.86,threshold:0.70,confidence:0.951,signal_quality:"GOOD",model_version:"demo",seed:7},
 low:{result:"LOW_QUALITY",anomaly_score:null,threshold:0.70,confidence:null,signal_quality:"POOR",model_version:"demo",seed:4}};
-const MACHINES=[{id:"fan_04",name:"Fan ID 04",type:"Industrial Fan",loc:"Production Line 02",ref:"fan/id_04"},{id:"fan_02",name:"Fan ID 02",type:"Industrial Fan",loc:"Production Line 01",ref:"fan/id_02"}];
+const MACHINES=[{id:"fan_04",name:"Fan",type:"Industrial Fan",loc:"Production Line 02",ref:"fan/id_04"}];
 const store={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 let history=store.get("ano_hist",[]),alerts=store.get("ano_alerts",[]);
 const api={async health(){if(DEMO)return true;try{return(await fetch(BASE+"/health")).ok}catch(e){return false}},
@@ -78,8 +105,8 @@ const demoBanner=()=>DEMO?`<div class="demo" role="note"><b>DEMO MODE</b> — re
 function metric(l,v,s){return`<div class="pn m"><span>${l}</span><b>${v}</b><span>${s||""}</span></div>`}
 function resultPanel(r,m){const[c,badge,head,desc]=L[r.result];
  return`<section class="pn hero ${c==="ok"?"":c}" aria-live="polite"><div class="mu">${mname(m)}${r.demo?" · demo sample":""}</div>
- <div class="big ${c} ${c==="ok"?"pulse":""}">${badge}</div><p><b>${head}</b><br>${desc}</p></section>
- <div class="grid">${metric("Anomaly score",f2(r.anomaly_score),"Reconstruction error")}${metric("Threshold",f2(r.threshold),"Configured by model")}${metric("Confidence",pc(r.confidence),"Not the same as score")}${metric("Signal quality",r.signal_quality[0]+r.signal_quality.slice(1).toLowerCase(),"")}</div>
+ <div class="big ${c} ${c==="ok"||c==="bad"?"pulse":""}">${badge}</div><p><b>${head}</b><br>${desc}</p></section>
+ <div class="grid">${metric("Anomaly score",f2(r.anomaly_score),"Reconstruction error")}${metric("Threshold",f2(r.threshold),"Configured by model")}${metric("Signal quality",r.signal_quality[0]+r.signal_quality.slice(1).toLowerCase(),"")}</div>
  <details class="pn"><summary><b>Why this result?</b></summary><p>${r.result==="NORMAL"?"The acoustic pattern is within the learned normal operating range.":r.result==="ANOMALY"?"The acoustic pattern differs significantly from the learned normal operating range. This model flags acoustic deviation; it does not identify a specific mechanical fault.":"Signal quality was too low, so no Normal/Anomaly decision is made."}</p></details>
  <div class="pn"><h2>Acoustic Feature Map <span class="mu" style="font-size:15px">Mel Spectrogram</span></h2>${r.spectrogram?'<canvas id="spec"></canvas><div class="mu">Time → · Frequency ↑</div>':'<p class="mu">Feature visualization unavailable for this analysis.</p>'}</div>`}
 /* ===== waveform (real mic when allowed, otherwise labelled demo signal) ===== */
@@ -95,15 +122,28 @@ async function startLive(cv,statusEl,machine){stopLive();const ctx=cv.getContext
  live={raf:0,stop(){stream&&stream.getTracks().forEach(x=>x.stop());ac&&ac.close()}};draw()}
 function drawSpec(r){const c=$("#spec");if(!c||!r.spectrogram)return;const s=r.spectrogram,x=c.getContext("2d");c.width=s[0].length;c.height=s.length;
  s.forEach((row,j)=>row.forEach((v,i)=>{x.fillStyle=`hsl(215,60%,${15+v*70}%)`;x.fillRect(i,s.length-1-j,1,1)}))}
+/* ===== mel spectrogram computed in-browser from the uploaded audio ===== */
+function fft(re,im){const n=re.length;for(let i=1,j=0;i<n;i++){let b=n>>1;for(;j&b;b>>=1)j^=b;j^=b;if(i<j){[re[i],re[j]]=[re[j],re[i]];[im[i],im[j]]=[im[j],im[i]]}}
+ for(let l=2;l<=n;l<<=1){const a=-2*Math.PI/l,wr=Math.cos(a),wi=Math.sin(a);for(let i=0;i<n;i+=l){let cr=1,ci=0;for(let k=0;k<l/2;k++){const u=i+k,v=u+l/2,tr=re[v]*cr-im[v]*ci,ti=re[v]*ci+im[v]*cr;re[v]=re[u]-tr;im[v]=im[u]-ti;re[u]+=tr;im[u]+=ti;const t=cr*wr-ci*wi;ci=cr*wi+ci*wr;cr=t}}}}
+async function melSpec(file){const ac=new(window.AudioContext||window.webkitAudioContext)();let buf;try{buf=await ac.decodeAudioData(await file.arrayBuffer())}finally{ac.close&&ac.close()}
+ const sr=buf.sampleRate,d=buf.getChannelData(0).subarray(0,Math.min(buf.length,sr*60)),N=1024,M=64,T=160,hop=Math.max(256,Math.floor((d.length-N)/(T-1)));
+ if(d.length<N)throw new Error("Audio too short");
+ const mel=f=>2595*Math.log10(1+f/700),imel=m=>700*(Math.pow(10,m/2595)-1),pts=Array.from({length:M+2},(_,i)=>imel(mel(sr/2)*i/(M+1))),bins=pts.map(f=>Math.floor((N+1)*f/sr));
+ const win=Float32Array.from({length:N},(_,i)=>.5-.5*Math.cos(2*Math.PI*i/(N-1))),spec=Array.from({length:M},()=>[]);let mx=-1e9;
+ for(let t=0;t<T;t++){const o=t*hop;if(o+N>d.length)break;const re=new Float64Array(N),im=new Float64Array(N);for(let i=0;i<N;i++)re[i]=d[o+i]*win[i];fft(re,im);
+  const p=new Float64Array(N/2+1);for(let i=0;i<=N/2;i++)p[i]=re[i]*re[i]+im[i]*im[i];
+  for(let m=0;m<M;m++){let e=0;const a=bins[m],b=bins[m+1],c=bins[m+2];for(let k=a;k<b;k++)e+=p[k]*(k-a)/Math.max(1,b-a);for(let k=b;k<c;k++)e+=p[k]*(c-k)/Math.max(1,c-b);const db=10*Math.log10(e+1e-10);spec[m].push(db);if(db>mx)mx=db}}
+ return spec.map(r=>r.map(v=>Math.max(0,Math.min(1,(v-(mx-80))/80))))}
 /* ===== trend chart (SVG) from stored analyses ===== */
 function trend(m){const d=history.filter(h=>h.machine===m&&h.anomaly_score!=null).slice(0,30).reverse();
  if(d.length<2)return`<p class="mu">No trend yet. Run at least two analyses to see how the score moves.</p>`;
  const W=600,H=180,th=d[0].threshold,y=v=>H-10-Math.min(v,1)*(H-20),x=i=>20+i*(W-40)/(d.length-1);
  return`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Anomaly score trend" style="width:100%"><line x1="0" x2="${W}" y1="${y(th)}" y2="${y(th)}" stroke="var(--wn)" stroke-dasharray="6 4"/><text x="${W-4}" y="${y(th)-4}" text-anchor="end" fill="var(--wn)" font-size="13">threshold ${f2(th)}</text>
  <polyline fill="none" stroke="var(--ac)" stroke-width="2.5" points="${d.map((p,i)=>x(i)+","+y(p.anomaly_score)).join(" ")}"/>
- ${d.map((p,i)=>`<circle cx="${x(i)}" cy="${y(p.anomaly_score)}" r="${p.result==="ANOMALY"?7:4}" fill="${p.result==="ANOMALY"?"var(--bad)":"var(--ac)"}"><title>${new Date(p.t).toLocaleString()} · score ${f2(p.anomaly_score)} · ${p.result} · confidence ${pc(p.confidence)}</title></circle>`).join("")}</svg>`}
+ ${d.map((p,i)=>`<circle cx="${x(i)}" cy="${y(p.anomaly_score)}" r="${p.result==="ANOMALY"?7:4}" fill="${p.result==="ANOMALY"?"var(--bad)":"var(--ac)"}"><title>${new Date(p.t).toLocaleString()} · score ${f2(p.anomaly_score)} · ${p.result}</title></circle>`).join("")}</svg>`}
 /* ===== views ===== */
-let cur=store.get("ano_m","fan_04");
+let cur="fan_04";const acct=()=>store.get("ano_acct",{});
+const accountPanel=()=>{const a=acct();return`<div class="pn"><h2>Account</h2><div class="row"><label class="row"><span class="mu">Email</span><input type="email" id="ae" autocomplete="email" value="${a.email||""}"></label><label class="row"><span class="mu">User ID</span><input type="text" id="au" autocomplete="username" value="${a.userId||""}"></label><label class="row"><span class="mu">Password</span><input type="password" id="ap" autocomplete="current-password"></label><button class="btn p" id="asv">Save</button></div><div class="mu" id="ast" role="status">${a.email?"Signed in as "+a.email+" (ID "+(a.userId||"—")+")":"Not signed in"}</div></div>`};
 const sel=()=>`<label class="row"><span class="mu">Machine</span><select id="ms">${MACHINES.map(m=>`<option value="${m.id}" ${m.id===cur?"selected":""}>${m.name}</option>`).join("")}</select></label>`;
 function last(m){return history.find(h=>h.machine===m)}
 const V={
@@ -112,6 +152,7 @@ const V={
  ${l?resultPanel({...l,spectrogram:null},cur).replace(/<div class="pn"><h2>Acoustic[\s\S]*?<\/div>$/,""):`<section class="pn hero"><div class="mu">${m.name} · ${m.loc}</div><div class="big mu">NO DATA</div><p>No analysis yet for this machine. Run a live check or analyze a sound sample to see its health.</p></section>`}
  <div class="pn"><h2>Live Acoustic Signal</h2><canvas id="cv" aria-label="Live waveform"></canvas><div class="row" style="margin-top:10px"><button class="btn p" id="go">Start Monitoring</button><button class="btn" id="stop">Stop</button><span class="mu" id="src">Input idle</span></div></div>
  <div class="pn"><h2>Machine Health Trend</h2>${trend(cur)}</div>
+ ${accountPanel()}
  <div class="row"><a class="btn p" href="#/analyze" style="display:inline-flex;align-items:center;text-decoration:none">Analyze Audio</a><a class="btn" href="#/history" style="display:inline-flex;align-items:center;text-decoration:none">View History</a><a class="btn" href="#/alerts" style="display:inline-flex;align-items:center;text-decoration:none">View Alerts</a></div>`},
 "/live"(){return`${demoBanner()}<h1>Live Machine Monitoring</h1><div class="row">${sel()}</div><br><div class="pn"><div id="state" role="status" aria-live="polite"><div class="big mu">IDLE</div><p>Ready to monitor</p></div><canvas id="cv" style="height:200px"></canvas><div class="mu" id="src">Input idle</div><br>
  <div class="row"><button class="btn p" id="go">Start Monitoring</button><button class="btn" id="stop">Stop Monitoring</button><button class="btn" id="an">Analyze Current Sample</button></div></div><div id="out"></div>`},
@@ -119,13 +160,13 @@ const V={
  <div class="row"><button class="btn p" id="run">Analyze with AI</button>${DEMO?`<span class="mu">Demo samples:</span><button class="btn" data-s="normal">Normal sample</button><button class="btn" data-s="anomaly">Anomalous sample</button><button class="btn" data-s="low">Low-quality sample</button>`:""}</div></div><div id="pipe"></div><div id="out"></div>`},
 "/machines"(){return`<h1>Machines</h1><br><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">${MACHINES.map(m=>{const l=last(m.id),c=l?L[l.result][0]:"mu";return`<a class="pn" style="text-decoration:none;color:inherit" href="#/machines/${m.id}"><h2>${m.name}</h2><div class="mu">${m.type} · ${m.loc}</div><p><span class="pill ${c}">${l?L[l.result][1]:"No data"}</span></p><div class="mu">Anomaly score ${f2(l&&l.anomaly_score)} · ${l?"analyzed "+ago(l.t):"never analyzed"}</div></a>`}).join("")}</div>`},
 "/machines/:id"(id){const m=MACHINES.find(x=>x.id===id);if(!m)return err("Machine not found","Check the link or pick a machine from the list.");cur=id;const l=last(id);
- return`<h1>${m.name}</h1><div class="mu">${m.type} · ${m.loc} · ${m.ref}</div><br>${l?`<div class="grid">${metric("Status",L[l.result][1],"")}${metric("Score",f2(l.anomaly_score),"")}${metric("Confidence",pc(l.confidence),"")}</div>`:""}
+ return`<h1>${m.name}</h1><div class="mu">${m.type} · ${m.loc} · ${m.ref}</div><br>${l?`<div class="grid">${metric("Status",L[l.result][1],"")}${metric("Score",f2(l.anomaly_score),"")}</div>`:""}
  <div class="pn"><h2>Health Trend</h2>${trend(id)}</div><div class="pn"><h2>Learned Normal Baseline</h2><p class="mu">This represents the acoustic behavior learned from normal operating samples. Baseline data has not been provided by the backend yet.</p></div>
  <div class="pn"><h2>Recent analyses</h2>${history.filter(h=>h.machine===id).slice(0,5).map(h=>`<div>${new Date(h.t).toLocaleString()} — ${L[h.result][1]} (${f2(h.anomaly_score)})</div>`).join("")||'<p class="mu">No analysis records yet.</p>'}</div>`},
 "/history"(){if(!history.length)return`<h1>Analysis History</h1><div class="pn"><p>No analysis records yet.</p><a class="btn p" href="#/analyze" style="display:inline-flex;align-items:center;text-decoration:none">Analyze Audio</a></div>`;
- const rows=history.map(h=>`<tr><td>${new Date(h.t).toLocaleString()}</td><td>${mname(h.machine)}</td><td><span class="pill ${L[h.result][0]}">${L[h.result][1]}</span></td><td>${f2(h.anomaly_score)}</td><td>${pc(h.confidence)}</td><td>${h.signal_quality}</td></tr>`).join("");
- return`<h1>Analysis History</h1><br><div class="pn"><table><thead><tr><th>Time<th>Machine<th>Result<th>Score<th>Confidence<th>Signal</tr></thead><tbody>${rows}</tbody></table>
- <div class="cards">${history.map(h=>`<div class="pn"><b>${mname(h.machine)}</b> <span class="pill ${L[h.result][0]}">${L[h.result][1]}</span><div class="mu">${new Date(h.t).toLocaleString()}</div>Score ${f2(h.anomaly_score)} · Confidence ${pc(h.confidence)}</div>`).join("")}</div></div>`},
+ const rows=history.map(h=>`<tr><td>${new Date(h.t).toLocaleString()}</td><td>${mname(h.machine)}</td><td><span class="pill ${L[h.result][0]}">${L[h.result][1]}</span></td><td>${f2(h.anomaly_score)}</td><td>${h.signal_quality}</td></tr>`).join("");
+ return`<h1>Analysis History</h1><br><div class="pn"><table><thead><tr><th>Time<th>Machine<th>Result<th>Score<th>Signal</tr></thead><tbody>${rows}</tbody></table>
+ <div class="cards">${history.map(h=>`<div class="pn"><b>${mname(h.machine)}</b> <span class="pill ${L[h.result][0]}">${L[h.result][1]}</span><div class="mu">${new Date(h.t).toLocaleString()}</div>Score ${f2(h.anomaly_score)}</div>`).join("")}</div></div>`},
 "/alerts"(){return`<h1>Alerts</h1><br>${alerts.length?alerts.map(a=>`<div class="pn" style="border-left:8px solid var(--bad)"><b class="bad">! ANOMALY DETECTED</b> <span class="pill bad">${a.sev}</span><br>${mname(a.machine)} · ${new Date(a.t).toLocaleString()}<br>Score ${f2(a.score)} / threshold ${f2(a.th)} · Further inspection recommended.<div class="row" style="margin-top:8px"><a class="btn" href="#/history" style="display:inline-flex;align-items:center;text-decoration:none">View Analysis</a><button class="btn" data-r="${a.id}">${a.status==="active"?"Mark resolved":"Resolved"}</button></div></div>`).join(""):`<div class="pn"><p><b>No active alerts.</b><br>All monitored machines are currently operating within their configured acoustic thresholds.</p></div>`}`}};
 const err=(a,b)=>`<div class="err" role="alert"><b>${a}</b><br>${b}<br><br><button class="btn" onclick="route()">Try Again</button></div>`;
 /* ===== pipeline ===== */
@@ -136,7 +177,8 @@ async function runAnalysis(file,sample){const pipe=$("#pipe"),out=$("#out");out.
  if(file){const ok=/\.(wav|mp3|flac)$/i.test(file.name);if(!ok||file.size>50e6){pipe.innerHTML=err("Unsupported file","Use a WAV, MP3 or FLAC file under 50 MB.");return}}
  const tick=setInterval(()=>{if(n<STAGES.length-1)showStages(pipe,++n)},450);showStages(pipe,0);
  try{const[r]=await Promise.all([api.analyze(file,cur,sample),new Promise(r=>setTimeout(r,DEMO?3700:0))]);clearInterval(tick);showStages(pipe,STAGES.length);
-  if(r.spectrogram==null&&r.demo){r.spectrogram=Array.from({length:48},(_,j)=>Array.from({length:96},(_,i)=>{const b=Math.exp(-j/14)*.8,e=r.result==="ANOMALY"&&i>50&&i<70?.6*Math.exp(-Math.abs(j-20)/9):0;return Math.min(1,b+e+.08*Math.sin(i*.4+j*r.seed))}))}
+  if(file&&r.spectrogram==null){try{r.spectrogram=await melSpec(file)}catch(e){r.spectrogram=null}}
+  if(r.spectrogram==null&&r.demo&&!file){r.spectrogram=Array.from({length:48},(_,j)=>Array.from({length:96},(_,i)=>{const b=Math.exp(-j/14)*.8,e=r.result==="ANOMALY"&&i>50&&i<70?.6*Math.exp(-Math.abs(j-20)/9):0;return Math.min(1,b+e+.08*Math.sin(i*.4+j*r.seed))}))}
   const rec=save(r,cur);out.innerHTML=resultPanel(r,cur)+(r.result==="ANOMALY"?`<div class="pn"><b>Alert created.</b> <a href="#/alerts">Open alert</a></div>`:"");drawSpec(r);return r}
  catch(e){clearInterval(tick);showStages(pipe,n,n);pipe.insertAdjacentHTML("beforeend",err("Audio analysis could not be completed.",(e.message||"Network error")+" Check that the service is reachable and the file is valid."))}}
 /* ===== router ===== */
@@ -151,11 +193,11 @@ function bind(h){const ms=$("#ms");ms&&ms.addEventListener("change",e=>{cur=e.ta
  const an=$("#an");an&&an.addEventListener("click",async()=>{const st=$("#state");if(!live){st.innerHTML='<div class="big wn">IDLE</div><p>Start monitoring before analyzing a sample.</p>';return}
   st.innerHTML='<div class="big wn">ANALYZING</div><p>Analyzing acoustic pattern...</p>';await new Promise(r=>setTimeout(r,900));
   /* live capture upload to /analyze is wired when ANO_API_BASE is set; demo mode analyzes the labelled normal sample */
-  const r=await api.analyze(null,cur,"normal");save(r,cur);const[c,b,t]=L[r.result];st.innerHTML=`<div class="big ${c}">${b}</div><p>${t}</p>`;$("#out").innerHTML=`<div class="grid">${metric("Anomaly score",f2(r.anomaly_score),r.demo?"Demo sample":"")}${metric("Threshold",f2(r.threshold),"")}${metric("Confidence",pc(r.confidence),"")}</div>`});
+  const r=await api.analyze(null,cur,"normal");save(r,cur);const[c,b,t]=L[r.result];st.innerHTML=`<div class="big ${c}">${b}</div><p>${t}</p>`;$("#out").innerHTML=`<div class="grid">${metric("Anomaly score",f2(r.anomaly_score),r.demo?"Demo sample":"")}${metric("Threshold",f2(r.threshold),"")}</div>`});
+ const asv=$("#asv");asv&&asv.addEventListener("click",()=>{const e=$("#ae").value.trim(),u=$("#au").value.trim(),p=$("#ap").value;const st=$("#ast");if(!e||!u||!p){st.textContent="Enter email, user ID and password.";return}store.set("ano_acct",{email:e,userId:u});$("#ap").value="";st.textContent="Signed in as "+e+" (ID "+u+")"});
  const f=$("#f");f&&f.addEventListener("change",()=>{const x=f.files[0];$("#fi").textContent=x?x.name+" · "+(x.size/1048576).toFixed(1)+" MB":""});
  const run=$("#run");run&&run.addEventListener("click",()=>runAnalysis(f.files[0],"normal"));
  document.querySelectorAll("[data-s]").forEach(b=>b.addEventListener("click",()=>runAnalysis(null,b.dataset.s)));
  document.querySelectorAll("[data-r]").forEach(b=>b.addEventListener("click",()=>{const a=alerts.find(x=>x.id==b.dataset.r);a.status="resolved";store.set("ano_alerts",alerts);b.textContent="Resolved"}))}
 addEventListener("hashchange",route);route();
-api.health().then(ok=>{$("#sys").textContent=ok?(DEMO?"● Demo mode (no API)":"● API connected"):"● System offline"});
 </script></body></html>
