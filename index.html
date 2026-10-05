@@ -89,14 +89,15 @@ function otpView(email,note){document.querySelector("nav").style.display="none";
  $("#bk").onclick=loginView}
 function render(){if(!session){stopLive();loginView();return}document.querySelector("nav").style.display="";document.querySelector(".app").classList.remove("auth");route()}
 async function boot(){const{data}=await sb.auth.getSession();session=data.session;
- sb.auth.onAuthStateChange((ev,s)=>{const was=!!session;session=s;if(!!s!==was)render()});render()}
+ sb.auth.onAuthStateChange((ev,s)=>{const was=!!session;const prev=session&&session.user?session.user.id:null;session=s;const now=s&&s.user?s.user.id:null;if(prev!==now){history=store.get("ano_hist",[]);alerts=store.get("ano_alerts",[])}if(!!s!==was||prev!==now)render()});render()}
 /* ===== API layer: set window.ANO_API_BASE to your FastAPI URL to leave demo mode ===== */
 const BASE=window.location.origin,DEMO=!BASE;
 const DEMO_SAMPLES={normal:{result:"NORMAL",anomaly_score:0.11,threshold:0.70,confidence:0.978,signal_quality:"EXCELLENT",model_version:"demo",seed:2},
 anomaly:{result:"ANOMALY",anomaly_score:0.86,threshold:0.70,confidence:0.951,signal_quality:"GOOD",model_version:"demo",seed:7},
 low:{result:"LOW_QUALITY",anomaly_score:null,threshold:0.70,confidence:null,signal_quality:"POOR",model_version:"demo",seed:4}};
 const MACHINES=[{id:"fan_04",name:"Fan",type:"Industrial Fan",loc:"Production Line 02",ref:"fan/id_04"}];
-const store={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const uk=k=>k+"_"+(session&&session.user?session.user.id:"guest");
+const store={get(k,d){try{return JSON.parse(localStorage.getItem(uk(k)))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(uk(k),JSON.stringify(v))}catch(e){}}};
 let history=store.get("ano_hist",[]),alerts=store.get("ano_alerts",[]);
 const api={async health(){if(DEMO)return true;try{return(await fetch(BASE+"/health")).ok}catch(e){return false}},
 async analyze(file,machine,sample){ /* the backend is the source of truth for the result */
