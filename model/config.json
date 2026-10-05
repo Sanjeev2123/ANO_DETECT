@@ -1,0 +1,21 @@
+{
+  "sr": 16000,
+  "n_fft": 1024,
+  "hop": 512,
+  "n_mels": 64,
+  "frames": 5,
+  "avg_channels": true,
+  "input_dim": 320,
+  "machine_id": "id_06",
+  "threshold": 0.7418597996234891,
+  "auc": 0.9927814090580352,
+  "model_version": "v1",
+  "normal_mean_score": 0.6220079026198739,
+  "abnormal_mean_score": 2.170557291388842,
+  "all_ids_auc": {
+    "id_00": 0.897,
+    "id_02": 0.982,
+    "id_04": 0.965,
+    "id_06": 0.993
+  }
+}
