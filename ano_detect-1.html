@@ -1,34 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
-
-const sb = supabase.createClient("https://jrmaeotdxygftxciimul.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpybWFlb3RkeHlnZnR4Y2lpbXVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTExNzg4ODMsImV4cCI6MjEwNjc1NDg4M30.fFF5KxlIYnj5yoybDWz3k9KvRgBlMQ4IWl3g9V88tTE");
-let session = null;
-
-function loginView() {
-  document.querySelector("nav").style.display = "none";
-  $("#v").innerHTML = `<div class="pn" style="max-width:360px;margin:60px auto">
-    <h1>Sign in</h1>
-    <input id="em" type="email" placeholder="Email" style="width:100%">
-    <input id="pw" type="password" placeholder="Password" style="width:100%">
-    <div class="row"><button class="btn p" id="in">Log in</button>
-    <button class="btn" id="up">Sign up</button></div>
-    <p id="msg" class="mu"></p></div>`;
-  const creds = () => ({ email: $("#em").value, password: $("#pw").value });
-  $("#in").onclick = async () => {
-    const { error } = await sb.auth.signInWithPassword(creds());
-    if (error) $("#msg").textContent = error.message;
-  };
-  $("#up").onclick = async () => {
-    const { error } = await sb.auth.signUp(creds());
-    $("#msg").textContent = error ? error.message : "Account created. Log in.";
-  };
-}
-
-
+<html lang="en"><head><meta charset="utf-8"><title>ANO DETECT</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>window.ANO_API_BASE = "http://127.0.0.1:8000";</script>
-<head><meta charset="utf-8"><title>ANO DETECT</title>
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#e8ecee;--pn:#f6f8f9;--ink:#17262e;--mu:#5d6e77;--ln:#cdd5d9;--ok:#1b7a4b;--wn:#a86a0c;--bad:#bb2d22;--ac:#1f4e79;--okbg:#dff0e6;--badbg:#f7dcd8;--wnbg:#f6e8cf;
@@ -75,10 +49,30 @@ nav .logo,nav .sys{display:none}nav a{flex:1;text-align:center;padding:10px 6px;
 main{padding:14px 14px 90px}table{display:none}.cards{display:block}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important}}
 </style></head><body>
-<div class="app"><nav aria-label="Main"><div class="logo">ANO_DETECT</div>
+<div class="app"><nav aria-label="Main"><div class="logo">ANO DETECT</div>
 <a href="#/">Dashboard</a><a href="#/live">Live Monitor</a><a href="#/analyze">Analyze Audio</a><a href="#/machines">Machines</a><a href="#/history">History</a><a href="#/alerts">Alerts</a>
 </nav><main id="v"></main></div>
 <script>
+/* ===== Supabase auth (anon key is public by design; protect data with RLS) ===== */
+const sb=supabase.createClient("https://jrmaeotdxygftxciimul.supabase.co","eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpybWFlb3RkeHlnZnR4Y2lpbXVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTExNzg4ODMsImV4cCI6MjEwNjc1NDg4M30.fFF5KxlIYnj5yoybDWz3k9KvRgBlMQ4IWl3g9V88tTE");
+let session=null;
+const esc=t=>String(t??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function loginView(){document.querySelector("nav").style.display="none";
+ $("#v").innerHTML=`<div class="pn" style="max-width:360px;margin:60px auto"><h1>Sign in</h1><br>
+  <input id="em" type="email" placeholder="Email" autocomplete="email" style="width:100%;margin-bottom:10px">
+  <input id="uid" type="text" placeholder="User ID (for sign up)" autocomplete="username" style="width:100%;margin-bottom:10px">
+  <input id="pw" type="password" placeholder="Password" autocomplete="current-password" style="width:100%;margin-bottom:10px">
+  <div class="row"><button class="btn p" id="in">Log in</button><button class="btn" id="up">Sign up</button></div>
+  <p id="msg" class="mu" role="status"></p></div>`;
+ const msg=t=>$("#msg").textContent=t,email=()=>$("#em").value.trim(),pw=()=>$("#pw").value;
+ $("#in").onclick=async()=>{if(!email()||!pw())return msg("Enter email and password.");msg("Signing in…");
+  const{error}=await sb.auth.signInWithPassword({email:email(),password:pw()});if(error)msg(error.message)};
+ $("#up").onclick=async()=>{const u=$("#uid").value.trim();if(!email()||!u||pw().length<6)return msg("Enter email, user ID and a password of at least 6 characters.");msg("Creating account…");
+  const{data,error}=await sb.auth.signUp({email:email(),password:pw(),options:{data:{user_id:u}}});
+  if(error)msg(error.message);else if(!data.session)msg("Account created. Check your email to confirm, then log in.")}}
+function render(){if(!session){stopLive();loginView();return}document.querySelector("nav").style.display="";route()}
+async function boot(){const{data}=await sb.auth.getSession();session=data.session;
+ sb.auth.onAuthStateChange((ev,s)=>{const was=!!session;session=s;if(!!s!==was)render()});render()}
 /* ===== API layer: set window.ANO_API_BASE to your FastAPI URL to leave demo mode ===== */
 const BASE=window.ANO_API_BASE||"";const DEMO=!BASE;
 const DEMO_SAMPLES={normal:{result:"NORMAL",anomaly_score:0.11,threshold:0.70,confidence:0.978,signal_quality:"EXCELLENT",model_version:"demo",seed:2},
@@ -142,8 +136,9 @@ function trend(m){const d=history.filter(h=>h.machine===m&&h.anomaly_score!=null
  <polyline fill="none" stroke="var(--ac)" stroke-width="2.5" points="${d.map((p,i)=>x(i)+","+y(p.anomaly_score)).join(" ")}"/>
  ${d.map((p,i)=>`<circle cx="${x(i)}" cy="${y(p.anomaly_score)}" r="${p.result==="ANOMALY"?7:4}" fill="${p.result==="ANOMALY"?"var(--bad)":"var(--ac)"}"><title>${new Date(p.t).toLocaleString()} · score ${f2(p.anomaly_score)} · ${p.result}</title></circle>`).join("")}</svg>`}
 /* ===== views ===== */
-let cur="fan_04";const acct=()=>store.get("ano_acct",{});
-const accountPanel=()=>{const a=acct();return`<div class="pn"><h2>Account</h2><div class="row"><label class="row"><span class="mu">Email</span><input type="email" id="ae" autocomplete="email" value="${a.email||""}"></label><label class="row"><span class="mu">User ID</span><input type="text" id="au" autocomplete="username" value="${a.userId||""}"></label><label class="row"><span class="mu">Password</span><input type="password" id="ap" autocomplete="current-password"></label><button class="btn p" id="asv">Save</button></div><div class="mu" id="ast" role="status">${a.email?"Signed in as "+a.email+" (ID "+(a.userId||"—")+")":"Not signed in"}</div></div>`};
+let cur="fan_04";
+const accountPanel=()=>{const u=(session&&session.user)||{},m=u.user_metadata||{};return`<div class="pn"><h2>Account</h2><div class="grid" style="margin-bottom:12px"><div><span class="mu">Email</span><br><b>${esc(u.email)}</b></div><div><span class="mu">User ID</span><br><b>${esc(m.user_id||u.id)}</b></div></div>
+ <div class="row"><input type="password" id="np" placeholder="New password" autocomplete="new-password"><button class="btn" id="apw">Change password</button><button class="btn" id="alo">Log out</button></div><div class="mu" id="ast" role="status"></div></div>`};
 const sel=()=>`<label class="row"><span class="mu">Machine</span><select id="ms">${MACHINES.map(m=>`<option value="${m.id}" ${m.id===cur?"selected":""}>${m.name}</option>`).join("")}</select></label>`;
 function last(m){return history.find(h=>h.machine===m)}
 const V={
@@ -194,10 +189,12 @@ function bind(h){const ms=$("#ms");ms&&ms.addEventListener("change",e=>{cur=e.ta
   st.innerHTML='<div class="big wn">ANALYZING</div><p>Analyzing acoustic pattern...</p>';await new Promise(r=>setTimeout(r,900));
   /* live capture upload to /analyze is wired when ANO_API_BASE is set; demo mode analyzes the labelled normal sample */
   const r=await api.analyze(null,cur,"normal");save(r,cur);const[c,b,t]=L[r.result];st.innerHTML=`<div class="big ${c}">${b}</div><p>${t}</p>`;$("#out").innerHTML=`<div class="grid">${metric("Anomaly score",f2(r.anomaly_score),r.demo?"Demo sample":"")}${metric("Threshold",f2(r.threshold),"")}</div>`});
- const asv=$("#asv");asv&&asv.addEventListener("click",()=>{const e=$("#ae").value.trim(),u=$("#au").value.trim(),p=$("#ap").value;const st=$("#ast");if(!e||!u||!p){st.textContent="Enter email, user ID and password.";return}store.set("ano_acct",{email:e,userId:u});$("#ap").value="";st.textContent="Signed in as "+e+" (ID "+u+")"});
+ const alo=$("#alo");alo&&alo.addEventListener("click",()=>sb.auth.signOut());
+ const apw=$("#apw");apw&&apw.addEventListener("click",async()=>{const p=$("#np").value,st=$("#ast");if(p.length<6){st.textContent="Password must be at least 6 characters.";return}
+  const{error}=await sb.auth.updateUser({password:p});$("#np").value="";st.textContent=error?error.message:"Password updated."});
  const f=$("#f");f&&f.addEventListener("change",()=>{const x=f.files[0];$("#fi").textContent=x?x.name+" · "+(x.size/1048576).toFixed(1)+" MB":""});
  const run=$("#run");run&&run.addEventListener("click",()=>runAnalysis(f.files[0],"normal"));
  document.querySelectorAll("[data-s]").forEach(b=>b.addEventListener("click",()=>runAnalysis(null,b.dataset.s)));
  document.querySelectorAll("[data-r]").forEach(b=>b.addEventListener("click",()=>{const a=alerts.find(x=>x.id==b.dataset.r);a.status="resolved";store.set("ano_alerts",alerts);b.textContent="Resolved"}))}
-addEventListener("hashchange",route);route();
+addEventListener("hashchange",()=>{session&&route()});boot();
 </script></body></html>
