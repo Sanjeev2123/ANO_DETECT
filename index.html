@@ -89,6 +89,7 @@ function otpView(email,note){document.querySelector("nav").style.display="none";
  $("#bk").onclick=loginView}
 function render(){if(!session){stopLive();loginView();return}document.querySelector("nav").style.display="";document.querySelector(".app").classList.remove("auth");route()}
 async function boot(){const{data}=await sb.auth.getSession();session=data.session;
+ history=store.get("ano_hist",[]);alerts=store.get("ano_alerts",[]);
  sb.auth.onAuthStateChange((ev,s)=>{const was=!!session;const prev=session&&session.user?session.user.id:null;session=s;const now=s&&s.user?s.user.id:null;if(prev!==now){history=store.get("ano_hist",[]);alerts=store.get("ano_alerts",[])}if(!!s!==was||prev!==now)render()});render()}
 /* ===== API layer: set window.ANO_API_BASE to your FastAPI URL to leave demo mode ===== */
 const BASE=window.location.origin,DEMO=!BASE;
