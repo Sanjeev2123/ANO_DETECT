@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><title>ANO DETECT</title>
+<html lang="en"><head><meta charset="utf-8"><title>ANO_DETECT</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>window.ANO_API_BASE = "http://127.0.0.1:8000";</script>
@@ -44,33 +44,50 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 .err{background:var(--badbg);border:1px solid var(--bad);padding:12px;border-radius:6px}
 select,input[type=file]{min-height:44px;font:inherit;max-width:100%}
 input:not([type=file]){min-height:44px;font:inherit;padding:0 10px;border:1px solid var(--ln);border-radius:6px;background:var(--bg);color:var(--ink);max-width:100%}
+.app.auth{grid-template-columns:1fr}
+input[type=checkbox]{min-height:0;width:18px;height:18px;padding:0}
 @media(max-width:760px){.app{display:block}nav{position:fixed;bottom:0;left:0;right:0;top:auto;height:auto;flex-direction:row;padding:4px;z-index:9;overflow-x:auto;gap:0}
 nav .logo,nav .sys{display:none}nav a{flex:1;text-align:center;padding:10px 6px;font-size:13px;white-space:nowrap}
 main{padding:14px 14px 90px}table{display:none}.cards{display:block}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important}}
 </style></head><body>
-<div class="app"><nav aria-label="Main"><div class="logo">ANO DETECT</div>
-<a href="#/">Dashboard</a><a href="#/live">Live Monitor</a><a href="#/analyze">Analyze Audio</a><a href="#/machines">Machines</a><a href="#/history">History</a><a href="#/alerts">Alerts</a>
+<div class="app"><nav aria-label="Main"><div class="logo">ANO_DETECT</div>
+<a href="#/">Dashboard</a><a href="#/live">Live Monitor</a><a href="#/analyze">Analyze Audio</a><a href="#/machines">Machines</a><a href="#/history">History</a><a href="#/alerts">Alerts</a><a href="#/profile">Profile</a>
 </nav><main id="v"></main></div>
 <script>
 /* ===== Supabase auth (anon key is public by design; protect data with RLS) ===== */
 const sb=supabase.createClient("https://jrmaeotdxygftxciimul.supabase.co","eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpybWFlb3RkeHlnZnR4Y2lpbXVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTExNzg4ODMsImV4cCI6MjEwNjc1NDg4M30.fFF5KxlIYnj5yoybDWz3k9KvRgBlMQ4IWl3g9V88tTE");
 let session=null;
 const esc=t=>String(t??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-function loginView(){document.querySelector("nav").style.display="none";
+const showToggle=id=>`<label class="row mu" style="margin-bottom:10px"><input type="checkbox" data-show="${id}"> Show password</label>`;
+const bindShow=()=>document.querySelectorAll("[data-show]").forEach(c=>c.onchange=()=>{$("#"+c.dataset.show).type=c.checked?"text":"password"});
+function loginView(){document.querySelector("nav").style.display="none";document.querySelector(".app").classList.add("auth");
  $("#v").innerHTML=`<div class="pn" style="max-width:360px;margin:60px auto"><h1>Sign in</h1><br>
   <input id="em" type="email" placeholder="Email" autocomplete="email" style="width:100%;margin-bottom:10px">
   <input id="uid" type="text" placeholder="User ID (for sign up)" autocomplete="username" style="width:100%;margin-bottom:10px">
   <input id="pw" type="password" placeholder="Password" autocomplete="current-password" style="width:100%;margin-bottom:10px">
+  ${showToggle("pw")}
   <div class="row"><button class="btn p" id="in">Log in</button><button class="btn" id="up">Sign up</button></div>
-  <p id="msg" class="mu" role="status"></p></div>`;
+  <p id="msg" class="mu" role="status"></p></div>`;bindShow();
  const msg=t=>$("#msg").textContent=t,email=()=>$("#em").value.trim(),pw=()=>$("#pw").value;
  $("#in").onclick=async()=>{if(!email()||!pw())return msg("Enter email and password.");msg("Signing in…");
-  const{error}=await sb.auth.signInWithPassword({email:email(),password:pw()});if(error)msg(error.message)};
+  const{error}=await sb.auth.signInWithPassword({email:email(),password:pw()});
+  if(error){if(error.code==="email_not_confirmed"||/not confirmed/i.test(error.message))otpView(email(),"Email not verified yet. Enter the code we sent, or resend it.");else msg(error.message)}};
  $("#up").onclick=async()=>{const u=$("#uid").value.trim();if(!email()||!u||pw().length<6)return msg("Enter email, user ID and a password of at least 6 characters.");msg("Creating account…");
   const{data,error}=await sb.auth.signUp({email:email(),password:pw(),options:{data:{user_id:u}}});
-  if(error)msg(error.message);else if(!data.session)msg("Account created. Check your email to confirm, then log in.")}}
-function render(){if(!session){stopLive();loginView();return}document.querySelector("nav").style.display="";route()}
+  if(error)msg(error.message);else if(!data.session)otpView(email(),"We sent a verification code to your email.")}}
+function otpView(email,note){document.querySelector("nav").style.display="none";document.querySelector(".app").classList.add("auth");
+ $("#v").innerHTML=`<div class="pn" style="max-width:360px;margin:60px auto"><h1>Verify email</h1><p class="mu">Enter the code sent to <b>${esc(email)}</b>.</p>
+  <input id="otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="Verification code" style="width:100%;margin-bottom:10px">
+  <div class="row"><button class="btn p" id="vf">Verify</button><button class="btn" id="rs">Resend code</button><button class="btn" id="bk">Back</button></div>
+  <p id="msg" class="mu" role="status">${esc(note||"")}</p></div>`;
+ const msg=t=>$("#msg").textContent=t;
+ $("#vf").onclick=async()=>{const t=$("#otp").value.replace(/\s/g,"");if(!t)return msg("Enter the code from your email.");msg("Verifying…");
+  const{error}=await sb.auth.verifyOtp({email,token:t,type:"signup"});if(error)msg(error.message)};
+ $("#rs").onclick=async()=>{const b=$("#rs");b.disabled=true;const{error}=await sb.auth.resend({type:"signup",email});msg(error?error.message:"A new code was sent.");
+  let n=60;const iv=setInterval(()=>{b.textContent=--n>0?"Resend ("+n+")":"Resend code";if(n<=0){clearInterval(iv);b.disabled=false}},1000)};
+ $("#bk").onclick=loginView}
+function render(){if(!session){stopLive();loginView();return}document.querySelector("nav").style.display="";document.querySelector(".app").classList.remove("auth");route()}
 async function boot(){const{data}=await sb.auth.getSession();session=data.session;
  sb.auth.onAuthStateChange((ev,s)=>{const was=!!session;session=s;if(!!s!==was)render()});render()}
 /* ===== API layer: set window.ANO_API_BASE to your FastAPI URL to leave demo mode ===== */
@@ -137,8 +154,6 @@ function trend(m){const d=history.filter(h=>h.machine===m&&h.anomaly_score!=null
  ${d.map((p,i)=>`<circle cx="${x(i)}" cy="${y(p.anomaly_score)}" r="${p.result==="ANOMALY"?7:4}" fill="${p.result==="ANOMALY"?"var(--bad)":"var(--ac)"}"><title>${new Date(p.t).toLocaleString()} · score ${f2(p.anomaly_score)} · ${p.result}</title></circle>`).join("")}</svg>`}
 /* ===== views ===== */
 let cur="fan_04";
-const accountPanel=()=>{const u=(session&&session.user)||{},m=u.user_metadata||{};return`<div class="pn"><h2>Account</h2><div class="grid" style="margin-bottom:12px"><div><span class="mu">Email</span><br><b>${esc(u.email)}</b></div><div><span class="mu">User ID</span><br><b>${esc(m.user_id||u.id)}</b></div></div>
- <div class="row"><input type="password" id="np" placeholder="New password" autocomplete="new-password"><button class="btn" id="apw">Change password</button><button class="btn" id="alo">Log out</button></div><div class="mu" id="ast" role="status"></div></div>`};
 const sel=()=>`<label class="row"><span class="mu">Machine</span><select id="ms">${MACHINES.map(m=>`<option value="${m.id}" ${m.id===cur?"selected":""}>${m.name}</option>`).join("")}</select></label>`;
 function last(m){return history.find(h=>h.machine===m)}
 const V={
@@ -147,7 +162,6 @@ const V={
  ${l?resultPanel({...l,spectrogram:null},cur).replace(/<div class="pn"><h2>Acoustic[\s\S]*?<\/div>$/,""):`<section class="pn hero"><div class="mu">${m.name} · ${m.loc}</div><div class="big mu">NO DATA</div><p>No analysis yet for this machine. Run a live check or analyze a sound sample to see its health.</p></section>`}
  <div class="pn"><h2>Live Acoustic Signal</h2><canvas id="cv" aria-label="Live waveform"></canvas><div class="row" style="margin-top:10px"><button class="btn p" id="go">Start Monitoring</button><button class="btn" id="stop">Stop</button><span class="mu" id="src">Input idle</span></div></div>
  <div class="pn"><h2>Machine Health Trend</h2>${trend(cur)}</div>
- ${accountPanel()}
  <div class="row"><a class="btn p" href="#/analyze" style="display:inline-flex;align-items:center;text-decoration:none">Analyze Audio</a><a class="btn" href="#/history" style="display:inline-flex;align-items:center;text-decoration:none">View History</a><a class="btn" href="#/alerts" style="display:inline-flex;align-items:center;text-decoration:none">View Alerts</a></div>`},
 "/live"(){return`${demoBanner()}<h1>Live Machine Monitoring</h1><div class="row">${sel()}</div><br><div class="pn"><div id="state" role="status" aria-live="polite"><div class="big mu">IDLE</div><p>Ready to monitor</p></div><canvas id="cv" style="height:200px"></canvas><div class="mu" id="src">Input idle</div><br>
  <div class="row"><button class="btn p" id="go">Start Monitoring</button><button class="btn" id="stop">Stop Monitoring</button><button class="btn" id="an">Analyze Current Sample</button></div></div><div id="out"></div>`},
@@ -163,6 +177,8 @@ const V={
  return`<h1>Analysis History</h1><br><div class="pn"><table><thead><tr><th>Time<th>Machine<th>Result<th>Score<th>Signal</tr></thead><tbody>${rows}</tbody></table>
  <div class="cards">${history.map(h=>`<div class="pn"><b>${mname(h.machine)}</b> <span class="pill ${L[h.result][0]}">${L[h.result][1]}</span><div class="mu">${new Date(h.t).toLocaleString()}</div>Score ${f2(h.anomaly_score)}</div>`).join("")}</div></div>`},
 "/alerts"(){return`<h1>Alerts</h1><br>${alerts.length?alerts.map(a=>`<div class="pn" style="border-left:8px solid var(--bad)"><b class="bad">! ANOMALY DETECTED</b> <span class="pill bad">${a.sev}</span><br>${mname(a.machine)} · ${new Date(a.t).toLocaleString()}<br>Score ${f2(a.score)} / threshold ${f2(a.th)} · Further inspection recommended.<div class="row" style="margin-top:8px"><a class="btn" href="#/history" style="display:inline-flex;align-items:center;text-decoration:none">View Analysis</a><button class="btn" data-r="${a.id}">${a.status==="active"?"Mark resolved":"Resolved"}</button></div></div>`).join(""):`<div class="pn"><p><b>No active alerts.</b><br>All monitored machines are currently operating within their configured acoustic thresholds.</p></div>`}`}};
+V["/profile"]=()=>{const u=(session&&session.user)||{},m=u.user_metadata||{};return`<h1>Profile</h1><br><div class="pn"><h2>Account</h2><div class="grid"><div><span class="mu">Email</span><br><b>${esc(u.email)}</b></div><div><span class="mu">User ID</span><br><b>${esc(m.user_id||u.id)}</b></div><div><span class="mu">Email status</span><br><b class="${u.email_confirmed_at?"ok":"wn"}">${u.email_confirmed_at?"✓ Verified":"Not verified"}</b></div></div></div>
+ <div class="pn"><h2>Change password</h2><input type="password" id="np" placeholder="New password" autocomplete="new-password" style="width:100%;max-width:360px;margin-bottom:10px">${showToggle("np")}<div class="row"><button class="btn p" id="apw">Update password</button><button class="btn" id="alo">Log out</button></div><div class="mu" id="ast" role="status"></div></div>`};
 const err=(a,b)=>`<div class="err" role="alert"><b>${a}</b><br>${b}<br><br><button class="btn" onclick="route()">Try Again</button></div>`;
 /* ===== pipeline ===== */
 const STAGES=["Uploading audio","Validating signal","Preprocessing audio","Generating Mel Spectrogram","Running Autoencoder","Calculating anomaly score","Comparing threshold","Generating result"];
@@ -189,7 +205,7 @@ function bind(h){const ms=$("#ms");ms&&ms.addEventListener("change",e=>{cur=e.ta
   st.innerHTML='<div class="big wn">ANALYZING</div><p>Analyzing acoustic pattern...</p>';await new Promise(r=>setTimeout(r,900));
   /* live capture upload to /analyze is wired when ANO_API_BASE is set; demo mode analyzes the labelled normal sample */
   const r=await api.analyze(null,cur,"normal");save(r,cur);const[c,b,t]=L[r.result];st.innerHTML=`<div class="big ${c}">${b}</div><p>${t}</p>`;$("#out").innerHTML=`<div class="grid">${metric("Anomaly score",f2(r.anomaly_score),r.demo?"Demo sample":"")}${metric("Threshold",f2(r.threshold),"")}</div>`});
- const alo=$("#alo");alo&&alo.addEventListener("click",()=>sb.auth.signOut());
+ bindShow();const alo=$("#alo");alo&&alo.addEventListener("click",()=>sb.auth.signOut());
  const apw=$("#apw");apw&&apw.addEventListener("click",async()=>{const p=$("#np").value,st=$("#ast");if(p.length<6){st.textContent="Password must be at least 6 characters.";return}
   const{error}=await sb.auth.updateUser({password:p});$("#np").value="";st.textContent=error?error.message:"Password updated."});
  const f=$("#f");f&&f.addEventListener("change",()=>{const x=f.files[0];$("#fi").textContent=x?x.name+" · "+(x.size/1048576).toFixed(1)+" MB":""});
