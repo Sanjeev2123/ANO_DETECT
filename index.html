@@ -91,7 +91,7 @@ function render(){if(!session){stopLive();loginView();return}document.querySelec
 async function boot(){const{data}=await sb.auth.getSession();session=data.session;
  sb.auth.onAuthStateChange((ev,s)=>{const was=!!session;session=s;if(!!s!==was)render()});render()}
 /* ===== API layer: set window.ANO_API_BASE to your FastAPI URL to leave demo mode ===== */
-const BASE=window.ANO_API_BASE||"";const DEMO=!BASE;
+const BASE=window.location.origin,DEMO=!BASE;
 const DEMO_SAMPLES={normal:{result:"NORMAL",anomaly_score:0.11,threshold:0.70,confidence:0.978,signal_quality:"EXCELLENT",model_version:"demo",seed:2},
 anomaly:{result:"ANOMALY",anomaly_score:0.86,threshold:0.70,confidence:0.951,signal_quality:"GOOD",model_version:"demo",seed:7},
 low:{result:"LOW_QUALITY",anomaly_score:null,threshold:0.70,confidence:null,signal_quality:"POOR",model_version:"demo",seed:4}};
